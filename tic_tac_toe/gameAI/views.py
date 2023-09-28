@@ -7,57 +7,27 @@ from .models import Tournament, Player, Game
 from .serializers import TournamentSerializer, PlayerSerializer, GameSerializer
 
 
-@api_view(['GET'])
-def tournament_detail(request, tournament_id):
-    tournament = Tournament.objects.get(pk=tournament_id)
-    serializer = TournamentSerializer(tournament)
-    return Response(serializer.data)
 
 
-@api_view(['POST'])
-def start_game(request):
-    # Initialize the game, AI, and played_moves here
-    ai = AI()
-    game = TicTacToe(ai)
-    played_moves = set()
 
-    if request.method == "POST":
-        # Reset button, reset the game
-        game.reset_game()
-        initial_game_data = game.get_board()
-        played_moves.clear()
 
-        # AI makes the first move
-        game.play(None)
-        initial_game_data = game.get_board()
-        for move in game.get_AI_last_played_move():
-            played_moves.add(move)
+def start_game(player_1, player_2):
+    """creates and return an empty tic_tac_toe"""
+    if player_1 is None and player_2 is None:
+        raise ValueError("Both players cannot be None")
+    return Game.create(player_1 = player_1, player_2 = player_2) # create a emty game
 
-        return Response({"game_data": initial_game_data}, status=status.HTTP_200_OK)
 
-    return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
-@api_view(['POST'])
-def play_game(request):
-    # Initialize the game, AI, and played_moves here
-    ai = AI()
-    game = TicTacToe(ai)
-    played_moves = set()
-
-    if request.method == "POST":
-        if "cell_value" in request.data:
-            # User clicked a cell button, process the move and update game state
-            cell_value = request.data.get("cell_value")
-            if cell_value not in played_moves:
-                played_moves.add(cell_value)
-                game.play(cell_value)
-
-                # AI move
-                game.play(None)
-                for move in game.get_AI_last_played_move():
-                    played_moves.add(move)
-                updated_game_data = game.get_board()
-
-                return Response({"game_data": updated_game_data}, status=status.HTTP_200_OK)
-
-    return Response(status=status.HTTP_204_NO_CONTENT)
+def play(game, player, cell):
+    if player not in [1, 2]:
+        raise ValueError("Invalid player. Player must be 1 or 2.")
+    if cell < 0 or cell > 8:
+        raise ValueError("Invalid cell. Cell must be between 0 and 8.")
+    # Make the player's move
+    game.make_move(player, cell)
+    # Check if the game is over
+    if game.is_game_over():
+        return game  # Game is over, no need for AI to play
+    # Make AI's move
+    game.make_ai_move()
+    return game
